@@ -51,4 +51,29 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// PUT update a recipe
+router.put("/:id", async (req, res) => {
+  try {
+    const { title, ingredients, instructions } = req.body;
+
+    const updatedRecipe = await Recipe.findByIdAndUpdate(
+      req.params.id,
+      {
+        title,
+        ingredients,
+        instructions,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedRecipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    res.status(200).json(updatedRecipe);
+  } catch (error) {
+    res.status(400).json({ message: "Failed to update recipe", error: error.message });
+  }
+});
+
 module.exports = router;
