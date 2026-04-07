@@ -6,9 +6,9 @@ const Recipe = require("../models/Recipe");
 router.get("/", async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ createdAt: -1 });
-    res.json(recipes);
+    res.status(200).json(recipes);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to fetch recipes", error: error.message });
   }
 });
 
@@ -17,16 +17,22 @@ router.post("/", async (req, res) => {
   try {
     const { title, ingredients, instructions } = req.body;
 
+    if (!title || !ingredients || !instructions) {
+      return res.status(400).json({
+        message: "Title, ingredients, and instructions are required",
+      });
+    }
+
     const newRecipe = new Recipe({
       title,
       ingredients,
-      instructions
+      instructions,
     });
 
     const savedRecipe = await newRecipe.save();
     res.status(201).json(savedRecipe);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: "Failed to add recipe", error: error.message });
   }
 });
 
@@ -39,9 +45,9 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Recipe not found" });
     }
 
-    res.json({ message: "Recipe deleted successfully" });
+    res.status(200).json({ message: "Recipe deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Failed to delete recipe", error: error.message });
   }
 });
 
