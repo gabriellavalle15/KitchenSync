@@ -4,22 +4,39 @@ const recipeSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Recipe title is required"],
+      required: true,
       trim: true,
+    },
+    category: {
+      type: String,
+      default: "",
+    },
+    area: {
+      type: String,
+      default: "",
     },
     ingredients: {
       type: [String],
-      required: [true, "At least one ingredient is required"],
+      default: [],
     },
     instructions: {
       type: String,
-      required: [true, "Instructions are required"],
-      trim: true,
+      default: "",
+    },
+    image: {
+      type: String,
+      default: "",
+    },
+    source: {
+      type: String,
+      default: "",
+    },
+    mealDbId: {
+      type: String,
+      default: "",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Recipe", recipeSchema);

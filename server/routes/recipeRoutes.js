@@ -15,24 +15,51 @@ router.get("/", async (req, res) => {
 // POST a new recipe
 router.post("/", async (req, res) => {
   try {
-    const { title, ingredients, instructions } = req.body;
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is missing" });
+    }
 
-    if (!title || !ingredients || !instructions) {
-      return res.status(400).json({
-        message: "Title, ingredients, and instructions are required",
-      });
+    const {
+      title,
+      category,
+      area,
+      ingredients,
+      instructions,
+      image,
+      source,
+      mealDbId,
+    } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    const existingRecipe = mealDbId
+      ? await Recipe.findOne({ mealDbId })
+      : null;
+
+    if (existingRecipe) {
+      return res.status(200).json(existingRecipe);
     }
 
     const newRecipe = new Recipe({
       title,
+      category,
+      area,
       ingredients,
       instructions,
+      image,
+      source,
+      mealDbId,
     });
 
     const savedRecipe = await newRecipe.save();
     res.status(201).json(savedRecipe);
   } catch (error) {
-    res.status(400).json({ message: "Failed to add recipe", error: error.message });
+    res.status(400).json({
+      message: "Failed to save recipe",
+      error: error.message,
+    });
   }
 });
 
