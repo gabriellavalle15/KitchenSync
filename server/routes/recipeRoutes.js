@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Request body is missing" });
     }
 
-    const {
+    let {
       title,
       category,
       area,
@@ -30,8 +30,28 @@ router.post("/", async (req, res) => {
       mealDbId,
     } = req.body;
 
+    title = title?.trim();
+    category = category?.trim() || "";
+    area = area?.trim() || "";
+    instructions = instructions?.trim() || "";
+    image = image?.trim() || "";
+    source = source?.trim() || "";
+    mealDbId = mealDbId?.trim() || "";
+
     if (!title) {
       return res.status(400).json({ message: "Title is required" });
+    }
+
+    if (!Array.isArray(ingredients)) {
+      return res.status(400).json({ message: "Ingredients must be an array" });
+    }
+
+    ingredients = ingredients
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0);
+
+    if (ingredients.length === 0) {
+      return res.status(400).json({ message: "At least one ingredient is required" });
     }
 
     const existingRecipe = mealDbId
@@ -62,7 +82,6 @@ router.post("/", async (req, res) => {
     });
   }
 });
-
 // DELETE a recipe
 router.delete("/:id", async (req, res) => {
   try {
@@ -81,14 +100,41 @@ router.delete("/:id", async (req, res) => {
 // PUT update a recipe
 router.put("/:id", async (req, res) => {
   try {
-    const { title, ingredients, instructions } = req.body;
+    let { title, category, area, ingredients, instructions, image, source } = req.body;
+
+    title = title?.trim();
+    category = category?.trim() || "";
+    area = area?.trim() || "";
+    instructions = instructions?.trim() || "";
+    image = image?.trim() || "";
+    source = source?.trim() || "";
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    if (!Array.isArray(ingredients)) {
+      return res.status(400).json({ message: "Ingredients must be an array" });
+    }
+
+    ingredients = ingredients
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0);
+
+    if (ingredients.length === 0) {
+      return res.status(400).json({ message: "At least one ingredient is required" });
+    }
 
     const updatedRecipe = await Recipe.findByIdAndUpdate(
       req.params.id,
       {
         title,
+        category,
+        area,
         ingredients,
         instructions,
+        image,
+        source,
       },
       { new: true, runValidators: true }
     );
@@ -99,7 +145,10 @@ router.put("/:id", async (req, res) => {
 
     res.status(200).json(updatedRecipe);
   } catch (error) {
-    res.status(400).json({ message: "Failed to update recipe", error: error.message });
+    res.status(400).json({
+      message: "Failed to update recipe",
+      error: error.message,
+    });
   }
 });
 

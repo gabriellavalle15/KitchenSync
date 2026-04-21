@@ -8,6 +8,9 @@ function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [groceryList, setGroceryList] = useState([]);
   const [selectedRecipeTitle, setSelectedRecipeTitle] = useState("");
+  const [expandedRecipeId, setExpandedRecipeId] = useState(null);
+  const [searchError, setSearchError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
 
   const fetchSavedRecipes = async () => {
     try {
@@ -25,14 +28,26 @@ function App() {
   const searchRecipes = async (e) => {
     e.preventDefault();
 
+    const trimmedSearch = searchTerm.trim();
+
+    if (!trimmedSearch) {
+      setSearchError("Please enter a recipe name to search.");
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchError("");
+    setSaveMessage("");
+
     try {
       const response = await axios.get(
-        `https://www.themealdb.com/api/json/v1/1/search.php?s=${searchTerm}`
+        `https://www.themealdb.com/api/json/v1/1/search.php?s=${trimmedSearch}`
       );
 
       setSearchResults(response.data.meals || []);
     } catch (error) {
       console.error("Error searching recipes:", error);
+      setSearchError("Something went wrong while searching. Please try again.");
     }
   };
 
@@ -66,11 +81,18 @@ function App() {
     };
 
     try {
-      await axios.post("/api/recipes", recipeData);
+      const response = await axios.post("/api/recipes", recipeData);
       await fetchSavedRecipes();
+
+      if (response.status === 200) {
+        setSaveMessage(`"${meal.strMeal}" is already saved.`);
+      } else {
+        setSaveMessage(`"${meal.strMeal}" was saved successfully.`);
+      }
     } catch (error) {
       console.error("Error saving recipe:", error);
       console.error("Server response:", error.response?.data);
+      setSaveMessage(error.response?.data?.message || "Failed to save recipe.");
     }
   };
 
@@ -85,6 +107,10 @@ function App() {
         setGroceryList([]);
         setSelectedRecipeTitle("");
       }
+
+      if (expandedRecipeId === id) {
+        setExpandedRecipeId(null);
+      }
     } catch (error) {
       console.error("Error deleting recipe:", error);
     }
@@ -96,116 +122,161 @@ function App() {
     setSelectedRecipeTitle(recipe.title);
   };
 
+  const toggleInstructions = (id) => {
+    setExpandedRecipeId((prev) => (prev === id ? null : id));
+  };
+
   return (
     <div className="app">
-      <h1>🍽️ KitchenSync</h1>
-      <p className="tagline">Search recipes. Save favorites. Simplify shopping.</p>
-
-      <form className="recipe-form" onSubmit={searchRecipes}>
-        <input
-          type="text"
-          placeholder="Search for recipes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          required
-        />
-        <button type="submit">Search</button>
-      </form>
-
-      <h2>Search Results</h2>
-      <div className="recipe-list">
-        {searchResults.length === 0 ? (
-          <p className="empty-state">
-            No search results yet. Try searching for pasta, chicken, or tacos.
-          </p>
-        ) : (
-          searchResults.map((meal) => (
-            <div key={meal.idMeal} className="recipe-card">
-              {meal.strMealThumb && (
-                <img
-                  src={meal.strMealThumb}
-                  alt={meal.strMeal}
-                  className="recipe-image"
-                />
-              )}
-
-              <h3>{meal.strMeal}</h3>
-              <p>
-                <strong>Category:</strong> {meal.strCategory}
-              </p>
-              <p>
-                <strong>Area:</strong> {meal.strArea}
-              </p>
-
-              <button onClick={() => handleSaveRecipe(meal)}>Save Recipe</button>
-            </div>
-          ))
-        )}
-      </div>
-
-      <h2>Saved Recipes</h2>
-      <div className="recipe-list">
-        {recipes.length === 0 ? (
-          <p className="empty-state">
-            No saved recipes yet. Save one from the search results to get started.
-          </p>
-        ) : (
-          recipes.map((recipe) => (
-            <div key={recipe._id} className="recipe-card">
-              {recipe.image && (
-                <img
-                  src={recipe.image}
-                  alt={recipe.title}
-                  className="recipe-image"
-                />
-              )}
-
-              <h3>{recipe.title}</h3>
-              <p>
-                <strong>Category:</strong> {recipe.category}
-              </p>
-              <p>
-                <strong>Area:</strong> {recipe.area}
-              </p>
-              <p>
-                <strong>Ingredients:</strong> {recipe.ingredients.join(", ")}
-              </p>
-
-              {recipe.source && (
-                <p>
-                  <strong>Source:</strong>{" "}
-                  <a href={recipe.source} target="_blank" rel="noreferrer">
-                    View Recipe
-                  </a>
-                </p>
-              )}
-
-              <div className="recipe-card-buttons">
-                <button onClick={() => generateGroceryList(recipe)}>
-                  Grocery List
-                </button>
-                <button onClick={() => handleDelete(recipe._id)}>Delete</button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <h2>
-        Grocery List{selectedRecipeTitle ? ` for ${selectedRecipeTitle}` : ""}
-      </h2>
-
-      {groceryList.length === 0 ? (
-        <p className="empty-state">
-          Choose a saved recipe to generate its grocery list.
+      <header className="hero">
+        <h1>🍽️ KitchenSync</h1>
+        <p className="tagline">
+          Search recipes. Save favorites. Simplify shopping.
         </p>
-      ) : (
-        <ul className="grocery-list">
-          {groceryList.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
-      )}
+      </header>
+
+      <section className="app-section">
+        <div className="section-heading">
+          <h2>Recipe Search</h2>
+          <p>Find recipes from an external API and save the ones you love.</p>
+        </div>
+
+        <form className="recipe-form" onSubmit={searchRecipes}>
+          <input
+            type="text"
+            placeholder="Search for recipes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            required
+          />
+          <button type="submit">Search</button>
+        </form>
+
+        {searchError && <p className="form-message error-message">{searchError}</p>}
+        {saveMessage && <p className="form-message success-message">{saveMessage}</p>}
+
+        <div className="recipe-list">
+          {searchResults.length === 0 ? (
+            <p className="empty-state">
+              No search results yet. Try searching for pasta, chicken, or tacos.
+            </p>
+          ) : (
+            searchResults.map((meal) => (
+              <div key={meal.idMeal} className="recipe-card">
+                {meal.strMealThumb && (
+                  <img
+                    src={meal.strMealThumb}
+                    alt={meal.strMeal}
+                    className="recipe-image"
+                  />
+                )}
+
+                <div className="recipe-meta">
+                  <span className="recipe-badge">{meal.strCategory}</span>
+                  <span className="recipe-badge">{meal.strArea}</span>
+                </div>
+
+                <h3>{meal.strMeal}</h3>
+
+                <button onClick={() => handleSaveRecipe(meal)}>Save Recipe</button>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="app-section">
+        <div className="section-heading">
+          <h2>Saved Recipes</h2>
+          <p>Your hand-picked meals, ready whenever you need them.</p>
+        </div>
+
+        <div className="recipe-list">
+          {recipes.length === 0 ? (
+            <p className="empty-state">
+              No saved recipes yet. Save one from the search results to get started.
+            </p>
+          ) : (
+            recipes.map((recipe) => (
+              <div key={recipe._id} className="recipe-card">
+                {recipe.image && (
+                  <img
+                    src={recipe.image}
+                    alt={recipe.title}
+                    className="recipe-image"
+                  />
+                )}
+
+                <div className="recipe-meta">
+                  <span className="recipe-badge">{recipe.category || "Recipe"}</span>
+                  <span className="recipe-badge">{recipe.area || "Global"}</span>
+                </div>
+
+                <h3>{recipe.title}</h3>
+
+                <p>
+                  <strong>Ingredients:</strong> {recipe.ingredients.join(", ")}
+                </p>
+
+                <div className="recipe-instructions">
+                  <button
+                    className="instructions-toggle"
+                    onClick={() => toggleInstructions(recipe._id)}
+                  >
+                    <span>
+                      {expandedRecipeId === recipe._id
+                        ? "Hide Instructions"
+                        : "View Instructions"}
+                    </span>
+                    <span className="toggle-icon">
+                      {expandedRecipeId === recipe._id ? "−" : "+"}
+                    </span>
+                  </button>
+
+                  {expandedRecipeId === recipe._id && (
+                    <div className="instructions-panel">
+                      <p className="instructions-label">Instructions</p>
+                      <p className="instructions-text">
+                        {recipe.instructions || "No instructions available."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="recipe-card-buttons">
+                  <button onClick={() => generateGroceryList(recipe)}>
+                    Grocery List
+                  </button>
+                  <button onClick={() => handleDelete(recipe._id)}>Delete</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="app-section grocery-section">
+        <div className="section-heading">
+          <h2>
+            Grocery List{selectedRecipeTitle ? ` for ${selectedRecipeTitle}` : ""}
+          </h2>
+          <p>
+            Build a shopping list directly from the saved recipe you selected.
+          </p>
+        </div>
+
+        {groceryList.length === 0 ? (
+          <p className="empty-state">
+            Choose a saved recipe to generate its grocery list.
+          </p>
+        ) : (
+          <ul className="grocery-list">
+            {groceryList.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
