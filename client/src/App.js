@@ -149,7 +149,10 @@ function App() {
             onChange={(e) => setSearchTerm(e.target.value)}
             required
           />
-          <button type="submit">Search</button>
+          <button type="submit" className="search-btn">
+            <span className="search-icon">🔍</span>
+              <span>Search</span>
+          </button>
         </form>
 
         {searchError && <p className="form-message error-message">{searchError}</p>}
@@ -178,7 +181,9 @@ function App() {
 
                 <h3>{meal.strMeal}</h3>
 
-                <button onClick={() => handleSaveRecipe(meal)}>Save Recipe</button>
+                 <button className="save-btn" onClick={() => handleSaveRecipe(meal)}>
+                    Save Recipe
+                </button>
               </div>
             ))
           )}
@@ -213,10 +218,6 @@ function App() {
                 </div>
 
                 <h3>{recipe.title}</h3>
-
-                <p>
-                  <strong>Ingredients:</strong> {recipe.ingredients.join(", ")}
-                </p>
 
                 <div className="recipe-instructions">
                   <button
